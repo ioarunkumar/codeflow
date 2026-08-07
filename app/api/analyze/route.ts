@@ -1,3 +1,4 @@
+import { createOpenAI } from '@ai-sdk/openai'
 import { generateText, gateway } from 'ai'
 import { NextResponse } from 'next/server'
 
@@ -17,6 +18,7 @@ function parseModelResponse(text: string) {
 }
 
 export async function POST(request: Request) {
+  let userApiKey = ''
   try {
     const body = await request.json() as { code?: unknown; language?: unknown; userApiKey?: unknown }
     const code = typeof body.code === 'string' ? body.code : ''
@@ -24,21 +26,27 @@ export async function POST(request: Request) {
     if (!code.trim()) return NextResponse.json({ error: 'Add some code before analyzing.' }, { status: 400 })
     if (code.length > MAX_CHARS || code.split('\n').length > MAX_LINES) return NextResponse.json({ error: 'Keep input under 6,000 characters and 150 lines.' }, { status: 413 })
 
-    const userApiKey = typeof body.userApiKey === 'string' ? body.userApiKey.trim() : ''
+    userApiKey = typeof body.userApiKey === 'string' ? body.userApiKey.trim() : ''
     const serverKey = process.env.AI_GATEWAY_API_KEY
-    if (!serverKey && !userApiKey) return NextResponse.json({ error: 'Hosted AI is not configured yet. Add AI_GATEWAY_API_KEY in project variables, or use your own API key.' }, { status: 503 })
+    if (!serverKey && !userApiKey) return NextResponse.json({ error: 'Hosted AI is not configured yet. Add AI_GATEWAY_API_KEY in project variables, or enter your OpenAI API key.' }, { status: 503 })
 
+    // A personal OpenAI key must use the OpenAI provider directly. Passing it as
+    // gateway providerOptions does not authenticate the OpenAI provider.
+    const model = userApiKey ? createOpenAI({ apiKey: userApiKey })('gpt-5.4-mini') : gateway('openai/gpt-5.4-mini')
     const result = await generateText({
-      model: gateway('openai/gpt-5.4-mini'),
+      model,
       system: SYSTEM_PROMPT,
       prompt: `Language: ${language}\n\nSource code:\n${code}`,
       maxOutputTokens: 1400,
       temperature: 0.2,
-      ...(userApiKey ? { providerOptions: { gateway: { apiKey: userApiKey } } } : {}),
     })
     return NextResponse.json(parseModelResponse(result.text))
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: 'The AI response was not valid JSON. Please try again.' }, { status: 502 })
+    const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error ? Number(error.statusCode) : 0
+    if (statusCode === 401 || statusCode === 403) {
+      return NextResponse.json({ error: userApiKey ? 'That OpenAI API key was rejected. Check the key and try again.' : 'Hosted AI authorization failed. Check the Vercel AI Gateway connection.' }, { status: 401 })
+    }
     return NextResponse.json({ error: 'Could not analyze this code right now. Please try again.' }, { status: 500 })
   }
 }

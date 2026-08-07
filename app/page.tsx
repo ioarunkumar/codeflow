@@ -56,10 +56,13 @@ export default function Page() {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language, userApiKey: userKey || undefined }),
+        body: JSON.stringify({ code, language, userApiKey: userKey.trim() || undefined }),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to analyze code.')
+      const body = await response.text()
+      let data: { mermaid?: string; explanation?: string; error?: string } = {}
+      try { data = JSON.parse(body) } catch { /* The route should return JSON, but keep failures actionable. */ }
+      if (!response.ok) throw new Error(data.error || `Analyze request failed (${response.status}).`)
+      if (!data.mermaid || !data.explanation) throw new Error('The analyzer returned an incomplete result. Please try again.')
       setDiagram(data.mermaid)
       setExplanation(data.explanation)
       setCooldown(10)
@@ -115,7 +118,7 @@ export default function Page() {
           <div className="editor"><div className="line-numbers" aria-hidden="true">{code.split('\n').map((_, index) => <span key={index}>{String(index + 1).padStart(2, '0')}</span>)}</div><textarea value={code} onChange={(event) => setCode(event.target.value)} spellCheck={false} aria-label="Code input" /></div>
           <div className="editor-meta"><span>{code.length.toLocaleString()} / 6,000 characters</span><span>{lineCount} / 150 lines</span></div>
           {code.length > 6000 || lineCount > 150 ? <p className="error-text">Keep your input under 6,000 characters and 150 lines.</p> : null}
-          <div className="key-row"><button className="key-button" onClick={() => setShowKey(!showKey)}><KeyRound size={15} /> {showKey ? 'Hide API key' : 'Use your own API key'} <span className="optional">optional</span></button>{showKey ? <div className="key-input"><input type="password" placeholder="sk-..." value={userKey} onChange={(event) => setUserKey(event.target.value)} aria-label="Optional API key" /><button onClick={() => setUserKey('')} aria-label="Clear API key"><X size={14} /></button></div> : null}</div>
+          <div className="key-row"><button className="key-button" onClick={() => setShowKey(!showKey)}><KeyRound size={15} /> {showKey ? 'Hide API key' : 'Use your own API key'} <span className="optional">optional</span></button>{showKey ? <div className="key-input"><input type="password" placeholder="OpenAI sk-..." value={userKey} onChange={(event) => setUserKey(event.target.value)} aria-label="Optional OpenAI API key" /><button onClick={() => setUserKey('')} aria-label="Clear API key"><X size={14} /></button></div> : null}</div>
           <button className="analyze-button" onClick={analyze} disabled={!canAnalyze}>{loading ? <><span className="spinner" /> Mapping logic...</> : cooldown ? `Ready again in ${cooldown}s` : <>Analyze code <span>→</span></>}</button>
           {error ? <p className="error-text" role="alert">{error}</p> : null}
           <p className="security-copy"><KeyRound size={13} /> Hosted mode keeps the provider key on the server. A personal key is sent only over HTTPS and never bundled into an .exe.</p>
