@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Download, FileCode2, KeyRound, Maximize2, Minus, Moon, Plus, Search, Share2, Sparkles, Sun, X } from 'lucide-react'
 import { MermaidDiagram } from '@/components/mermaid-diagram'
 
@@ -44,6 +44,8 @@ export default function Page() {
   const [zoom, setZoom] = useState(1)
   const [dark, setDark] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [notice, setNotice] = useState('')
+  const diagramPanelRef = useRef<HTMLDivElement>(null)
 
   const lineCount = useMemo(() => code.split('\n').length, [code])
   const canAnalyze = code.trim().length > 0 && code.length <= 6000 && lineCount <= 150 && !loading && cooldown === 0
@@ -83,6 +85,26 @@ export default function Page() {
     setError('')
   }
 
+  const shareDiagram = async () => {
+    const shareData = { title: 'CodeFlow diagram', text: diagram }
+    try {
+      if (navigator.share) await navigator.share(shareData)
+      else { await navigator.clipboard.writeText(diagram); setNotice('Mermaid source copied to clipboard.') }
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === 'AbortError') return
+      setNotice('Unable to share automatically. Mermaid source is ready to copy below.')
+    }
+    window.setTimeout(() => setNotice(''), 3500)
+  }
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen()
+      else await diagramPanelRef.current?.requestFullscreen()
+    } catch { setNotice('Fullscreen is not available in this browser.') }
+    window.setTimeout(() => setNotice(''), 3500)
+  }
+
   const downloadDiagram = () => {
     const blob = new Blob([diagram], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -107,10 +129,10 @@ export default function Page() {
       </section>
 
       <section className="workspace-grid">
-        <div className="workspace-panel diagram-panel">
-          <div className="panel-header"><div><p className="panel-kicker">01 / VISUAL MAP</p><h2>Flowchart canvas</h2></div><div className="panel-tools"><button className="icon-button" aria-label="Share diagram"><Share2 size={16} /></button><button className="icon-button" aria-label="Download Mermaid file" onClick={downloadDiagram}><Download size={16} /></button><button className="icon-button" aria-label="Fullscreen"><Maximize2 size={16} /></button></div></div>
-          <div className="canvas-wrap"><div className="canvas-grid" /><div className="diagram-stage" style={{ transform: `scale(${zoom})` }}><MermaidDiagram chart={diagram} dark={dark} /></div><div className="zoom-controls"><button onClick={() => setZoom(Math.min(1.5, zoom + 0.1))} aria-label="Zoom in"><Plus size={16} /></button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom(Math.max(0.7, zoom - 0.1))} aria-label="Zoom out"><Minus size={16} /></button></div></div>
-          <div className="canvas-footer"><span><span className="live-dot" /> Preview ready</span><span>Mermaid syntax · {diagram.split('\n').length} lines</span></div>
+        <div className="workspace-panel diagram-panel" ref={diagramPanelRef}>
+          <div className="panel-header"><div><p className="panel-kicker">01 / VISUAL MAP</p><h2>Flowchart canvas</h2></div><div className="panel-tools"><button className="icon-button" aria-label="Share diagram" onClick={shareDiagram}><Share2 size={16} /></button><button className="icon-button" aria-label="Download Mermaid file" onClick={downloadDiagram}><Download size={16} /></button><button className="icon-button" aria-label="Fullscreen" onClick={toggleFullscreen}><Maximize2 size={16} /></button></div></div>
+          <div className="canvas-wrap"><div className="canvas-grid" /><div className="diagram-stage" style={{ transform: `scale(${zoom})` }}><MermaidDiagram chart={diagram} dark={dark} /></div><div className="zoom-controls"><button onClick={() => setZoom(Math.min(1.5, zoom + 0.1))} aria-label="Zoom in"><Plus size={16} /></button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} aria-label="Zoom out"><Minus size={16} /></button></div></div>
+          <div className="canvas-footer"><span><span className="live-dot" /> Preview ready</span><span>Mermaid syntax · {diagram.split('\n').length} lines</span></div>{notice ? <p className="canvas-notice" role="status">{notice}</p> : null}
         </div>
 
         <div className="workspace-panel code-panel">
