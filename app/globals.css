@@ -41,13 +41,13 @@ h1 { max-width: 580px; margin: 0; font-size: clamp(42px, 6vw, 72px); line-height
 .panel-header { display: flex; align-items: start; justify-content: space-between; gap: 15px; padding: 22px 23px 18px; border-bottom: 1px solid var(--border); }
 .panel-kicker { margin-bottom: 6px; color: #7890aa; font-size: 9px; }
 h2 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
-.canvas-wrap { position: relative; min-height: 430px; overflow: hidden; display: grid; place-items: center; background: #fbfcfe; }
+.canvas-wrap { position: relative; min-height: 430px; max-height: 620px; overflow: auto; display: flex; align-items: flex-start; justify-content: center; background: #fbfcfe; }
 .dark .canvas-wrap { background: #111d2c; }
-.canvas-grid { position: absolute; inset: 0; opacity: .35; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 24px 24px; }
-.diagram-stage { position: relative; width: 94%; display: flex; justify-content: center; transition: transform .2s ease; transform-origin: center; }
-.mermaid-output { width: min(100%, 640px); min-height: 245px; display: grid; place-items: center; }
-.mermaid-output svg { max-width: 100%; max-height: 340px; height: auto; }
-.diagram-error { position: relative; max-width: 320px; padding: 18px; color: var(--muted); text-align: center; border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+.canvas-grid { position: absolute; inset: 0; min-height: 100%; opacity: .35; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 24px 24px; pointer-events: none; }
+.diagram-stage { position: relative; min-width: max-content; min-height: 430px; display: flex; align-items: flex-start; justify-content: center; padding: 40px; transition: transform .2s ease; transform-origin: top center; }
+.mermaid-output { width: max-content; min-width: 640px; min-height: 245px; display: grid; place-items: center; }
+.mermaid-output svg { display: block; width: auto; max-width: none; height: auto; min-width: 640px; }
+.diagram-error { position: relative; max-width: 420px; margin: 80px 24px; padding: 18px; color: var(--muted); text-align: center; border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; line-height: 1.55; }
 .zoom-controls { position: absolute; right: 17px; bottom: 16px; display: flex; align-items: center; gap: 10px; padding: 5px 7px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-size: 11px; box-shadow: 0 5px 14px rgba(20, 43, 70, .07); }
 .zoom-controls button { width: 25px; height: 25px; display: grid; place-items: center; border: 0; border-radius: 5px; background: var(--soft-blue); color: var(--primary); }
 .canvas-footer, .editor-meta { display: flex; justify-content: space-between; gap: 10px; padding: 11px 22px; color: var(--muted); font-size: 10px; }
